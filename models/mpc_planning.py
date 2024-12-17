@@ -32,44 +32,42 @@ class InventoryMPC:
             Tuple: (cumulative reward, first action).
         """
         total_reward = 0
-        current_state = initial_state.clone().to(self.device)
+        inventory_level = 0
         first_action = None
+
+        # remove first element of state (number of items)
+        current_state = initial_state[1:]
 
         for step in range(self.horizon):
             # Predict the next state's demand distribution
-            input_data = current_state.unsqueeze(0)  # Add batch dimension
-            mean, std = self.model.probabilistic_forward(input_data, num_samples=self.num_samples)
-            mean, std = mean.to(self.device), std.to(self.device)
+            input_data = current_state.unsqueeze(0).to(self.device)  # Add batch dimension
+            samples = self.model.probabilistic_forward(input_data, num_samples=self.num_samples)
 
             # Sample demand from the predicted distribution
-            sampled_demand = torch.normal(mean, std).squeeze().item()
+            sampled_demand = self.model.sample_distribution(samples, num_samples=5)[0]
 
             # Determine the action (order quantity) to match the sampled demand
-            action = max(0, sampled_demand - current_state.sum().item())  # Ensure non-negative actions
+            action = int(max(0, sampled_demand - inventory_level))  # Ensure non-negative actions
+
+            inventory_level += action  # Update inventory level after taking the action
 
             # Keep the first action for returning later
             if step == 0:
-                first_action = int(action)
-
-            # Simulate the state transition
-            input_data = torch.cat([current_state, torch.tensor([action], dtype=torch.float32, device=self.device)])
-            input_data = input_data.unsqueeze(0)  # Add batch dimension
-            next_mean, next_std = self.model.probabilistic_forward(input_data, num_samples=self.num_samples)
+                first_action = action
 
             # Sample the next state from the predicted distribution
-            next_state = torch.normal(next_mean, next_std).squeeze()
+            actual_demand = self.model.sample_distribution(samples, num_samples=1)[0]
 
             # Compute waste and stock-outs
-            inventory_level = next_state.sum().item()
             waste = max(0, inventory_level - sampled_demand)
             stockout = max(0, sampled_demand - inventory_level)
 
             # Compute reward (negative penalties for waste and stock-outs)
             reward = -(waste + stockout)
             total_reward += reward
+            inventory_level = waste  # Update inventory level for the next step
 
-            # Update the current state for the next step
-            current_state = next_state[:-1]  # Decrement shelf life (last shelf life is spoiled)
+            current_state = self.model.update_state(current_state, actual_demand).to(self.device)
 
         return total_reward, first_action
 

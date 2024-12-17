@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 
 class BayesianDenseNet(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_dim=128, num_layers=5, dropout_rate=0.5):
@@ -38,10 +39,45 @@ class BayesianDenseNet(nn.Module):
             num_samples: Number of Monte Carlo samples.
 
         Returns:
-            mean: Mean prediction across samples.
-            std: Standard deviation of predictions across samples.
+            samples: Tensor of shape (num_samples, output_dim).
         """
         self.train()  # Enable dropout for sampling
         outputs = torch.stack([self.forward(x) for _ in range(num_samples)])
         self.eval()  # Return to evaluation mode
-        return outputs.mean(dim=0), outputs.std(dim=0)
+        return outputs.squeeze()
+    
+    def sample_distribution(self, distribution, num_samples=300):
+        """
+        Sample from the predicted distribution using Monte Carlo dropout.
+
+        Args:
+            x: Input tensor.
+            num_samples: Number of Monte Carlo samples.
+
+        Returns:
+            mean: Mean of the predicted distribution.
+            std: Standard deviation of the predicted distribution.
+        """
+        sampled_values = distribution[torch.randint(0, distribution.size(0), (num_samples,))].detach().numpy()
+        return sampled_values.mean(), sampled_values.std()
+    
+    def update_state(self, current_state, actual_demand):
+        current_state = current_state.clone().detach().cpu().numpy()
+        # Update rolling 7-day demand
+        current_state[0] = current_state[0] * 6 / 7 + actual_demand / 7
+        # Update rolling 14-day demand
+        current_state[1] = current_state[1] * 13 / 14 + actual_demand / 14
+        # Update rolling 28-day demand
+        current_state[2] = current_state[2] * 27 / 28 + actual_demand / 28
+        # Update day of the week
+        current_state[3] = (current_state[3] + 1) % 7
+        # Update week of the year
+        if current_state[3] == 0:
+            current_state[4] += 1
+            current_state[4] %= 52
+        # Update sine and cosine features
+        current_state[5] = np.sin(2 * np.pi * (current_state[4] * 7 + current_state[3]) / 365)  
+        current_state[6] = np.cos(2 * np.pi * (current_state[4] * 7 + current_state[3]) / 365)
+
+        current_state = torch.tensor(current_state).float()
+        return current_state

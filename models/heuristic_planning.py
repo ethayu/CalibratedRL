@@ -28,16 +28,16 @@ class HeuristicPlanner:
         """
         # Move state to the appropriate device
         state = state.to(self.device)
+        state = state[1:]
 
         # Predict demand for the next day
         input_data = state.unsqueeze(0)  # Add batch dimension
-        mean, _ = self.model.probabilistic_forward(input_data, num_samples=self.num_samples)
+        samples = self.model.probabilistic_forward(input_data, num_samples=self.num_samples)
+        mean = samples.mean(dim=0)
         expected_demand = mean.squeeze().item()
 
         # Set inventory to safety_factor * expected_demand
         target_inventory = self.safety_factor * expected_demand
 
-        # Compute the action (order quantity)
-        current_inventory = state.sum().item()  # Total inventory in current state
-        action = max(0, target_inventory - current_inventory)  # Avoid negative orders
+        action = int(target_inventory)  # Avoid negative orders
         return int(action)

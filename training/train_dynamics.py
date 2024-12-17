@@ -28,7 +28,7 @@ def train_item_model(item_nbr, train_csv, output_dir, device, input_dim=7, outpu
 
     # Training loop
     model.train()
-    for epoch in range(10):  # Adjust number of epochs as needed
+    for epoch in range(50):  # Adjust number of epochs as needed
         total_loss = 0
         for features, targets in dataloader:
             optimizer.zero_grad()
