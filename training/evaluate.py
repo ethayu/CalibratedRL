@@ -5,6 +5,7 @@ from models.mpc_planning import InventoryMPC
 from models.heuristic_planning import HeuristicPlanner
 from models.dynamics_model import BayesianDenseNet
 import numpy as np
+import random
 
 def evaluate_planner(planner, data, model, device):
     """
@@ -71,6 +72,27 @@ def evaluate_planner(planner, data, model, device):
         "Reward": total_reward
     }
 
+def enforce_reproducibility(seed=42):
+    """
+    Enforce reproducibility by setting random seeds in Python, NumPy, and PyTorch.
+
+    Args:
+        seed: Random seed to use for reproducibility.
+    """
+    # Set Python's random seed
+    random.seed(seed)
+
+    # Set NumPy random seed
+    np.random.seed(seed)
+
+    # Set PyTorch random seed
+    torch.manual_seed(seed)
+
+    # For CUDA GPUs
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+
 def main():
     # Define the device
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
@@ -78,6 +100,9 @@ def main():
     # Paths
     test_csv = "data/test_processed.csv"
     model_dir = "models/item_models"
+
+    # Enforce reproducibility
+    enforce_reproducibility()
 
     # Load test data
     test_data = pd.read_csv(test_csv)
