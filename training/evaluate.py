@@ -5,16 +5,15 @@ from models.mpc_planning import InventoryMPC
 from models.heuristic_planning import HeuristicPlanner
 from models.dynamics_model import BayesianDenseNet
 import numpy as np
-import random
+from training import enforce_reproducibility
 
-def evaluate_planner(planner, data, model, device):
+def evaluate_planner(planner, data, device):
     """
     Evaluate a planner on a dataset.
 
     Args:
         planner: Planning model (MPC or HeuristicPlanner).
         data: DataFrame of test data with state features.
-        model: Trained transition model.
         device: Device to run computations on (e.g., "cpu", "cuda", or "mps").
 
     Returns:
@@ -72,27 +71,6 @@ def evaluate_planner(planner, data, model, device):
         "Reward": total_reward
     }
 
-def enforce_reproducibility(seed=42):
-    """
-    Enforce reproducibility by setting random seeds in Python, NumPy, and PyTorch.
-
-    Args:
-        seed: Random seed to use for reproducibility.
-    """
-    # Set Python's random seed
-    random.seed(seed)
-
-    # Set NumPy random seed
-    np.random.seed(seed)
-
-    # Set PyTorch random seed
-    torch.manual_seed(seed)
-
-    # For CUDA GPUs
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
-
 def main():
     # Define the device
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
@@ -113,6 +91,10 @@ def main():
     # Initialize results
     mpc_results_all = []
     heuristic_results_all = []
+    mpc_isotonic_results_all = []
+    heuristic_isotonic_results_all = []
+    mpc_gp_beta_results_all = []
+    heuristic_gp_beta_results_all = []
 
     # Evaluate each item separately
     for item_nbr in unique_items:
@@ -129,27 +111,56 @@ def main():
         model.eval()
 
         # Initialize planners
-        mpc = InventoryMPC(model, input_dim=state_dim, num_trajectories=200, device=device)
-        heuristic = HeuristicPlanner(model, device=device)
+        mpc = InventoryMPC(model, input_dim=state_dim, num_trajectories=200, device=device, calibration=None)
+        heuristic = HeuristicPlanner(model, device=device, calibration=None)
+        mpc_isotonic = InventoryMPC(model, input_dim=state_dim, num_trajectories=200, device=device, calibration='isotonic')
+        heuristic_isotonic = HeuristicPlanner(model, device=device, calibration='isotonic')
+        mpc_gp_beta = InventoryMPC(model, input_dim=state_dim, num_trajectories=200, device=device, calibration='gp_beta')
+        heuristic_gp_beta = HeuristicPlanner(model, device=device, calibration='gp_beta')
 
         # Evaluate planners
-        mpc_results = evaluate_planner(mpc, item_data, model, device)
-        heuristic_results = evaluate_planner(heuristic, item_data, model, device)
+        # mpc_results = evaluate_planner(mpc, item_data, device)
+        # heuristic_results = evaluate_planner(heuristic, item_data, device)
+        mpc_isotonic_results = evaluate_planner(mpc_isotonic, item_data, device)
+        heuristic_isotonic_results = evaluate_planner(heuristic_isotonic, item_data, device)
+        mpc_gp_beta_results = evaluate_planner(mpc_gp_beta, item_data, device)
+        heuristic_gp_beta_results = evaluate_planner(heuristic_gp_beta, item_data, device)
 
         # Store results
         mpc_results['item_nbr'] = item_nbr
         heuristic_results['item_nbr'] = item_nbr
+        mpc_isotonic_results['item_nbr'] = item_nbr
+        heuristic_isotonic_results['item_nbr'] = item_nbr
+        mpc_gp_beta_results['item_nbr'] = item_nbr
+        heuristic_gp_beta_results['item_nbr'] = item_nbr
+
         mpc_results_all.append(mpc_results)
         heuristic_results_all.append(heuristic_results)
+        mpc_isotonic_results_all.append(mpc_isotonic_results)
+        heuristic_isotonic_results_all.append(heuristic_isotonic_results)
+        mpc_gp_beta_results_all.append(mpc_gp_beta_results)
+        heuristic_gp_beta_results_all.append(heuristic_gp_beta_results)
 
         mpc_results = pd.DataFrame(mpc_results, index=[0])
         heuristic_results = pd.DataFrame(heuristic_results, index=[0])
-        mpc_results.to_csv(f"results/mpc/{item_nbr}_results.csv", index=False)
-        heuristic_results.to_csv(f"results/heuristic/{item_nbr}_results.csv", index=False)
+        mpc_isotonic_results = pd.DataFrame(mpc_isotonic_results, index=[0])
+        heuristic_isotonic_results = pd.DataFrame(heuristic_isotonic_results, index=[0])
+        mpc_gp_beta_results = pd.DataFrame(mpc_gp_beta_results, index=[0])
+        heuristic_gp_beta_results = pd.DataFrame(heuristic_gp_beta_results, index=[0])
+        mpc_results.to_csv(f"results/mpc_by_item/{item_nbr}_results.csv", index=False)
+        heuristic_results.to_csv(f"results/heuristic_by_item/{item_nbr}_results.csv", index=False)
+        mpc_isotonic_results.to_csv(f"results/mpc_isotonic_by_item/{item_nbr}_results.csv", index=False)
+        heuristic_isotonic_results.to_csv(f"results/heuristic_isotonic_by_item/{item_nbr}_results.csv", index=False)
+        mpc_gp_beta_results.to_csv(f"results/mpc_gp_beta_by_item/{item_nbr}_results.csv", index=False)
+        heuristic_gp_beta_results.to_csv(f"results/heuristic_gp_beta_by_item/{item_nbr}_results.csv", index=False)
 
     # Convert results to DataFrames
     mpc_results_all = pd.DataFrame(mpc_results_all)
     heuristic_results_all = pd.DataFrame(heuristic_results_all)
+    mpc_isotonic_results_all = pd.DataFrame(mpc_isotonic_results_all)
+    heuristic_isotonic_results_all = pd.DataFrame(heuristic_isotonic_results_all)
+    mpc_gp_beta_results_all = pd.DataFrame(mpc_gp_beta_results_all)
+    heuristic_gp_beta_results_all = pd.DataFrame(heuristic_gp_beta_results_all)
 
     # Aggregate results
     mpc_summary = mpc_results_all.sum()
@@ -158,16 +169,40 @@ def main():
     heuristic_summary = heuristic_results_all.sum()
     heuristic_summary["% Waste"] = heuristic_summary["Wasted"] / heuristic_summary["Shipped"] * 100
     heuristic_summary["% Stockouts"] = heuristic_summary["Stockouts"] / heuristic_summary["Shipped"] * 100
+    mpc_isotonic_summary = mpc_isotonic_results_all.sum()
+    mpc_isotonic_summary["% Waste"] = mpc_isotonic_summary["Wasted"] / mpc_isotonic_summary["Shipped"] * 100
+    mpc_isotonic_summary["% Stockouts"] = mpc_isotonic_summary["Stockouts"] / mpc_isotonic_summary["Shipped"] * 100
+    heuristic_isotonic_summary = heuristic_isotonic_results_all.sum()
+    heuristic_isotonic_summary["% Waste"] = heuristic_isotonic_summary["Wasted"] / heuristic_isotonic_summary["Shipped"] * 100
+    heuristic_isotonic_summary["% Stockouts"] = heuristic_isotonic_summary["Stockouts"] / heuristic_isotonic_summary["Shipped"] * 100
+    mpc_gp_beta_summary = mpc_gp_beta_results_all.sum()
+    mpc_gp_beta_summary["% Waste"] = mpc_gp_beta_summary["Wasted"] / mpc_gp_beta_summary["Shipped"] * 100
+    mpc_gp_beta_summary["% Stockouts"] = mpc_gp_beta_summary["Stockouts"] / mpc_gp_beta_summary["Shipped"] * 100
+    heuristic_gp_beta_summary = heuristic_gp_beta_results_all.sum()
+    heuristic_gp_beta_summary["% Waste"] = heuristic_gp_beta_summary["Wasted"] / heuristic_gp_beta_summary["Shipped"] * 100
+    heuristic_gp_beta_summary["% Stockouts"] = heuristic_gp_beta_summary["Stockouts"] / heuristic_gp_beta_summary["Shipped"] * 100
 
     # Print results
     print("\nMPC Summary Results:")
     print(mpc_summary)
     print("\nHeuristic Summary Results:")
     print(heuristic_summary)
+    print("\nMPC Isotonic Summary Results:")
+    print(mpc_isotonic_summary)
+    print("\nHeuristic Isotonic Summary Results:")
+    print(heuristic_isotonic_summary)
+    print("\nMPC GP Beta Summary Results:")
+    print(mpc_gp_beta_summary)
+    print("\nHeuristic GP Beta Summary Results:")
+    print(heuristic_gp_beta_summary)
 
     # Save results
     mpc_results_all.to_csv("results/mpc_results.csv", index=False)
     heuristic_results_all.to_csv("results/heuristic_results.csv", index=False)
+    mpc_isotonic_results_all.to_csv("results/mpc_isotonic_results.csv", index=False)
+    heuristic_isotonic_results_all.to_csv("results/heuristic_isotonic_results.csv", index=False)
+    mpc_gp_beta_results_all.to_csv("results/mpc_gp_beta_results.csv", index=False)
+    heuristic_gp_beta_results_all.to_csv("results/heuristic_gp_beta_results.csv", index=False)
 
 if __name__ == "__main__":
     main()

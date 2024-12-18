@@ -1,7 +1,7 @@
 import torch
 
 class HeuristicPlanner:
-    def __init__(self, model, safety_factor=1.5, num_samples=300, device="cpu"):
+    def __init__(self, model, safety_factor=1.5, num_samples=300, device="cpu", calibration=None):
         """
         Heuristic planner that sets inventory to a safety factor * expected demand.
 
@@ -15,6 +15,7 @@ class HeuristicPlanner:
         self.safety_factor = safety_factor
         self.num_samples = num_samples
         self.device = device
+        self.calibration = calibration
 
     def plan(self, state):
         """
@@ -32,7 +33,7 @@ class HeuristicPlanner:
 
         # Predict demand for the next day
         input_data = state.unsqueeze(0)  # Add batch dimension
-        samples = self.model.probabilistic_forward(input_data, num_samples=self.num_samples)
+        samples = self.model.probabilistic_forward(input_data, num_samples=self.num_samples, calibration=self.calibration)
         mean = samples.mean(dim=0)
         expected_demand = mean.squeeze().item()
 

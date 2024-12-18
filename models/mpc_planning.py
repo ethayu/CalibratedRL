@@ -1,8 +1,5 @@
-import torch
-import numpy as np
-
 class InventoryMPC:
-    def __init__(self, model, input_dim, horizon=5, num_trajectories=1000, num_samples=300, device="cpu"):
+    def __init__(self, model, input_dim, horizon=5, num_trajectories=1000, num_samples=300, device="cpu", calibration=None):
         """
         Initialize MPC for inventory management with probabilistic sampling.
 
@@ -20,6 +17,7 @@ class InventoryMPC:
         self.num_trajectories = num_trajectories
         self.num_samples = num_samples
         self.device = device
+        self.calibration = calibration
 
     def simulate_trajectory(self, initial_state):
         """
@@ -41,7 +39,7 @@ class InventoryMPC:
         for step in range(self.horizon):
             # Predict the next state's demand distribution
             input_data = current_state.unsqueeze(0).to(self.device)  # Add batch dimension
-            samples = self.model.probabilistic_forward(input_data, num_samples=self.num_samples)
+            samples = self.model.probabilistic_forward(input_data, num_samples=self.num_samples, calibration=self.calibration)
 
             # Sample demand from the predicted distribution
             sampled_demand = self.model.sample_distribution(samples, num_samples=5)[0]
