@@ -33,7 +33,7 @@ class HeuristicPlanner:
 
         # Predict demand for the next day
         input_data = state.unsqueeze(0)  # Add batch dimension
-        samples = self.model.probabilistic_forward(input_data, num_samples=self.num_samples, calibration=self.calibration)
+        samples = self.model.probabilistic_forward(input_data, num_samples=self.num_samples, calibration=self.calibration).squeeze()
         mean = samples.mean(dim=0)
         expected_demand = mean.squeeze().item()
 

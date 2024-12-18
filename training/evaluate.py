@@ -73,7 +73,10 @@ def evaluate_planner(planner, data, device):
 
 def main():
     # Define the device
-    device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+    device = torch.device(
+        "mps" if torch.backends.mps.is_available() 
+        else ("cuda" if torch.cuda.is_available() else "cpu")
+    )
 
     # Paths
     test_csv = "data/test_processed.csv"

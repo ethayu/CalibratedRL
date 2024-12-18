@@ -49,7 +49,10 @@ def main():
     # Paths and settings
     train_csv = "data/train_processed.csv"
     output_dir = "models/item_models"
-    device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+    device = torch.device(
+        "mps" if torch.backends.mps.is_available() 
+        else ("cuda" if torch.cuda.is_available() else "cpu")
+    )
 
     # Load unique items from the dataset
     data = pd.read_csv(train_csv)

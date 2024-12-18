@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 from netcal import manual_seed
 from netcal.regression import IsotonicRegression, GPBeta
+from typing import Union
 
 class BayesianNet(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_dim=128, num_layers=5, dropout_rate=0.5):
@@ -32,7 +33,7 @@ class BayesianNet(nn.Module):
             x = F.dropout(x, p=self.dropout_rate, training=self.training)  # Dropout is active only in training mode
         return self.output_layer(x)
 
-    def probabilistic_forward(self, x, num_samples=300, calibrator=None, seed=42):
+    def probabilistic_forward(self, x, num_samples=300, calibrator: Union[GPBeta, IsotonicRegression] = None, seed=42):
         """
         Compute the probabilistic forward pass with Monte Carlo sampling.
 
@@ -46,45 +47,11 @@ class BayesianNet(nn.Module):
         self.train()  # Enable dropout for sampling
         outputs = torch.stack([self.forward(x) for _ in range(num_samples)]).detach()
         self.eval()  # Return to evaluation mode
-        # create pdf from samples - probability of each sample is ratio of times it appears in the samples
-        #plot pdf
-        # import matplotlib.pyplot as plt
-        # plt.hist(outputs.squeeze(), bins=30, density=True, alpha=0.6, label='Histogram (PDF Approx)')
-        # kde = gaussian_kde(outputs)
-        # x_vals = np.linspace(min(outputs), max(outputs), 100)
-        # plt.plot(x_vals, kde(x_vals), label='Smoothed KDE', linewidth=2)
-
-        # plt.xlabel('State')
-        # plt.ylabel('Density')
-        # plt.title('PDF of Next States')
-        # plt.legend()
-        # plt.show()
-        # plt.show()
         if calibrator:
-            # convert outputs to probability distribution]
-            y = outputs.squeeze()
-            # y_std = outputs.std(dim=0)
-            # X, counts = torch.unique(outputs.squeeze(), return_counts=True)
-            # X = X.unsqueeze(0)
-            # # Step 3: Normalize counts to create probabilities
-            # Y = counts.float() / counts.sum()
-            # if calibrator == 'isotonic':
-            #     with manual_seed(seed):
-            #         isotonic_calibration = IsotonicRegression()
-            #         print(np.finfo(float).eps * torch.ones_like(X))
-            #         print(X)
-            #         isotonic_calibration.fit(outputs.squeeze().unsqueeze(0), )
-            #         t_iso, s_iso, q_iso = isotonic_calibration.transform((X,  torch.ones_like(X)))
-            #         plt.plot(s_iso.squeeze())
-            #         plt.show()
-            #         isotonic_calibration.sa
-            #         exit(0)
-            # elif calibrator == 'gp_beta':
-            #     with manual_seed(seed):
-            #         beta_calibration = GPBeta(n_inducing_points=12, n_random_samples=256, n_epochs=100, use_cuda=True)
-            #         beta_calibration.fit(outputs)
-            #         outputs = beta_calibration(outputs)
-        return outputs.squeeze()
+            t, s, q = calibrator.transform(outputs.squeeze().unsqueeze(0))
+            outputs = None
+            # TODO: Implement calibration
+        return outputs
     
     def sample_distribution(self, distribution, num_samples=300):
         """

@@ -39,7 +39,7 @@ class InventoryMPC:
         for step in range(self.horizon):
             # Predict the next state's demand distribution
             input_data = current_state.unsqueeze(0).to(self.device)  # Add batch dimension
-            samples = self.model.probabilistic_forward(input_data, num_samples=self.num_samples, calibration=self.calibration)
+            samples = self.model.probabilistic_forward(input_data, num_samples=self.num_samples, calibration=self.calibration).squeeze()
 
             # Sample demand from the predicted distribution
             sampled_demand = self.model.sample_distribution(samples, num_samples=5)[0]
