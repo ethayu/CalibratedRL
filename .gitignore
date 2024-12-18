@@ -9,7 +9,7 @@ __pycache__/
 data/train.csv
 
 # Ignore model checkpoint files
-models/item_models/*.pth
+# models/item_models/*.pth
 
 # Ignore other temporary or backup files
 *.bak
