@@ -3,7 +3,7 @@ import torch
 import os
 from models.mpc_planning import InventoryMPC
 from models.heuristic_planning import HeuristicPlanner
-from models.dynamics_model import BayesianDenseNet
+from models.dynamics_model import BayesianNet
 import numpy as np
 from training import enforce_reproducibility
 
@@ -105,7 +105,7 @@ def main():
         state_dim = len(item_data.columns) - 3  # Excluding item_nbr, date, and unit_sales
 
         # Load the model for this item
-        model = BayesianDenseNet(input_dim=state_dim, output_dim=1).to(device)
+        model = BayesianNet(input_dim=state_dim, output_dim=1).to(device)
         model_path = os.path.join(model_dir, f"model_item_{item_nbr}.pth")
         model.load_state_dict(torch.load(model_path, weights_only=True))
         model.eval()

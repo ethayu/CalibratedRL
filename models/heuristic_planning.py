@@ -6,7 +6,7 @@ class HeuristicPlanner:
         Heuristic planner that sets inventory to a safety factor * expected demand.
 
         Args:
-            model: Trained BayesianDenseNet transition model.
+            model: Trained BayesianNet transition model.
             safety_factor: Multiplier for expected demand to avoid stock-outs.
             num_samples: Number of Monte Carlo samples for Bayesian inference.
             device: Device to run computations on (e.g., "cpu", "cuda", or "mps").

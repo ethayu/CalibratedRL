@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import torch
 from torch.utils.data import DataLoader
-from models.dynamics_model import BayesianDenseNet
+from models.dynamics_model import BayesianNet
 from data.inventory_dataloader import InventoryDataset
 
 def train_item_model(item_nbr, train_csv, output_dir, device, input_dim=7, output_dim=1):
@@ -22,7 +22,7 @@ def train_item_model(item_nbr, train_csv, output_dir, device, input_dim=7, outpu
     dataloader = DataLoader(dataset, batch_size=64, shuffle=True)
 
     # Initialize the model, loss function, and optimizer
-    model = BayesianDenseNet(input_dim=input_dim, output_dim=output_dim).to(device)
+    model = BayesianNet(input_dim=input_dim, output_dim=output_dim).to(device)
     criterion = torch.nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 

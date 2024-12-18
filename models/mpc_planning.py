@@ -4,7 +4,7 @@ class InventoryMPC:
         Initialize MPC for inventory management with probabilistic sampling.
 
         Args:
-            model: Trained BayesianDenseNet transition model.
+            model: Trained BayesianNet transition model.
             input_dim: Number of features in the state.
             horizon: Planning horizon (number of steps).
             num_trajectories: Number of trajectories to sample.
