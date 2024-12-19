@@ -18,12 +18,13 @@ class HeuristicPlanner:
         self.device = device
         self.calibrator = calibrator
 
-    def plan(self, state):
+    def plan(self, state, inventory_level):
         """
         Compute the heuristic action based on the safety factor.
 
         Args:
             state: Current state vector.
+            inventory_level: Current inventory level.
 
         Returns:
             Action (order quantity) to bring inventory to the target level.
@@ -46,4 +47,4 @@ class HeuristicPlanner:
         target_inventory = self.safety_factor * expected_demand
 
         action = int(target_inventory)  # Avoid negative orders
-        return int(action)
+        return max(action - inventory_level, 0)  # Ensure non-negative actions

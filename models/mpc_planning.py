@@ -72,12 +72,13 @@ class InventoryMPC:
             
         return total_reward, first_action
 
-    def plan(self, initial_state):
+    def plan(self, initial_state, inventory_level):
         """
         Perform MPC by simulating trajectories and selecting the best first action.
 
         Args:
             initial_state: Current state vector.
+            inventory_level: Current inventory level.
 
         Returns:
             Best action to take in the current state.
@@ -94,4 +95,4 @@ class InventoryMPC:
                 best_reward = trajectory_reward
                 best_action = trajectory_action
 
-        return best_action
+        return max(best_action - inventory_level, 0)

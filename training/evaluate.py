@@ -8,7 +8,7 @@ import numpy as np
 from training import enforce_reproducibility
 from netcal.regression import IsotonicRegression, GPBeta
 
-def evaluate_planner(planner, data, device):
+def evaluate_planner(planner, data: pd.DataFrame, device):
     """
     Evaluate a planner on a dataset.
 
@@ -29,19 +29,19 @@ def evaluate_planner(planner, data, device):
     import time
     start_time = time.time()
     count = 0
-    for _, row in data.iterrows():
+    for _, row in data.sort_values(by='date').iterrows():
         # Get the current state
         state = torch.tensor(row.drop(labels=["item_nbr", "date"]).values.astype(np.float32), dtype=torch.float32, device=device)
 
         # Plan the next action
-        action = planner.plan(state)
+        action = planner.plan(state, inventory_level)
 
         inventory_level += action
         
         demand = state[0]
 
         # Compute waste and stockouts
-        waste = max(0, inventory_level - demand)
+        waste = max(0, min(action, inventory_level - demand))
         stockout = max(0, demand - inventory_level)
 
         # Update metrics
@@ -107,6 +107,9 @@ def main():
 
     # Evaluate each item separately
     for item_nbr in unique_items:
+        if os.path.isfile(f"results/heuristic_by_item/{item_nbr}_results.csv"):
+            print(f"Results for item {item_nbr} already exist. Skipping evaluation.")
+            continue
         print(f"Evaluating item: {item_nbr}")
         
         isotonic = IsotonicRegression()
@@ -161,7 +164,7 @@ def main():
         heuristic_isotonic_results = pd.DataFrame(heuristic_isotonic_results, index=[0])
         mpc_gp_beta_results = pd.DataFrame(mpc_gp_beta_results, index=[0])
         heuristic_gp_beta_results = pd.DataFrame(heuristic_gp_beta_results, index=[0])
-        
+
         os.makedirs("results/mpc_by_item", exist_ok=True)
         os.makedirs("results/heuristic_by_item", exist_ok=True)
         os.makedirs("results/mpc_isotonic_by_item", exist_ok=True)
