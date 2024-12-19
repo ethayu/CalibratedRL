@@ -68,8 +68,8 @@ class InventoryMPC:
             total_reward += reward
             inventory_level = waste  # Update inventory level for the next step
 
-            current_state = self.model.update_state(current_state, actual_demand).to(self.device))
-
+            current_state = self.model.update_state(current_state, actual_demand).to(self.device)
+            
         return total_reward, first_action
 
     def plan(self, initial_state):
