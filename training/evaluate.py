@@ -28,7 +28,8 @@ def evaluate_planner(planner, data, device):
     inventory_level = 0
     import time
     start_time = time.time()
-    for i, row in data.iterrows():
+    count = 0
+    for _, row in data.iterrows():
         # Get the current state
         state = torch.tensor(row.drop(labels=["item_nbr", "date"]).values.astype(np.float32), dtype=torch.float32, device=device)
 
@@ -50,9 +51,9 @@ def evaluate_planner(planner, data, device):
         reward = -(waste + stockout) # Negative for waste and stockouts
         total_reward += reward
         inventory_level = waste  # Update inventory level for the next step
-        print(f"{i}: Shipped: {shipped}, Wasted: {wasted}, Stockouts: {stockouts}, Reward: {total_reward}, Time: {time.time() - start_time}")
+        print(f"{count}: Shipped: {shipped}, Wasted: {wasted}, Stockouts: {stockouts}, Reward: {total_reward}, Time: {time.time() - start_time}")
         start_time = time.time()
-        if i > 100:
+        if count := count + 1 > 100:
             break
 
     if type(shipped) == torch.Tensor:
@@ -125,15 +126,20 @@ def main():
 
         # Initialize planners
         mpc = InventoryMPC(model, input_dim=state_dim, num_trajectories=20, device=device, calibrator=None)
+        mpc = InventoryMPC(model, input_dim=state_dim, num_trajectories=20, device=device, calibrator=None)
         heuristic = HeuristicPlanner(model, device=device, calibrator=None)
         mpc_isotonic = InventoryMPC(model, input_dim=state_dim, num_trajectories=20, device=device, calibrator=isotonic)
+        mpc_isotonic = InventoryMPC(model, input_dim=state_dim, num_trajectories=20, device=device, calibrator=isotonic)
         heuristic_isotonic = HeuristicPlanner(model, device=device, calibrator=isotonic)
+        mpc_gp_beta = InventoryMPC(model, input_dim=state_dim, num_trajectories=20, device=device, calibrator=gp_beta)
         mpc_gp_beta = InventoryMPC(model, input_dim=state_dim, num_trajectories=20, device=device, calibrator=gp_beta)
         heuristic_gp_beta = HeuristicPlanner(model, device=device, calibrator=gp_beta)
 
         # Evaluate planners
         mpc_results = evaluate_planner(mpc, item_data, device)
         heuristic_results = evaluate_planner(heuristic, item_data, device)
+        mpc_isotonic_results = evaluate_planner(mpc_isotonic, item_data, device)
+        heuristic_isotonic_results = evaluate_planner(heuristic_isotonic, item_data, device)
         mpc_isotonic_results = evaluate_planner(mpc_isotonic, item_data, device)
         heuristic_isotonic_results = evaluate_planner(heuristic_isotonic, item_data, device)
         mpc_gp_beta_results = evaluate_planner(mpc_gp_beta, item_data, device)

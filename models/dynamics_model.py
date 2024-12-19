@@ -48,16 +48,12 @@ class BayesianNet(nn.Module):
         outputs = torch.stack([self.forward(x) for _ in range(num_samples)]).detach()
         self.eval()  # Return to evaluation mode
         if calibrator:
-            t, s, q = calibrator.transform(outputs.squeeze().unsqueeze(0).cpu().numpy(), outputs.squeeze().cpu().unique().numpy())
-            # print(t.shape, t)
-            # print(s.shape, s)
-            # print(q.shape, q)
-            # input()
+            t, _, q = calibrator.transform(outputs.squeeze().unsqueeze(0).cpu().numpy(), outputs.squeeze().cpu().unique().numpy())
             return t[:, 0, :].squeeze(), q[:, 0, :].squeeze()
         else:
             return outputs.cpu()
     
-    def sample_distribution(self, distribution, num_samples=300, pdf=False):
+    def sample_distribution(self, distribution, num_samples=300, cdf=False):
         """
         Sample from the predicted distribution using Monte Carlo dropout.
 
@@ -69,8 +65,8 @@ class BayesianNet(nn.Module):
             mean: Mean of the predicted distribution.
             std: Standard deviation of the predicted distribution.
         """
-        if pdf:
-            points, pdf = distribution
+        if cdf:
+            points, cdf = distribution
             # pdf /= np.sum(pdf)
             
             # # Softmax
@@ -85,7 +81,7 @@ class BayesianNet(nn.Module):
             random_values = np.random.uniform(0, 1, num_samples)
     
             # Use interpolation to find corresponding points
-            sampled_points = np.interp(random_values, pdf, points)
+            sampled_points = np.interp(random_values, cdf, points)
             return sampled_points.mean(), sampled_points.std()
         else:
             sampled_values = distribution[torch.randint(0, distribution.size(0), (num_samples,))].detach().numpy()

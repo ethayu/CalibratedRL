@@ -40,7 +40,7 @@ class HeuristicPlanner:
             mean = samples.mean(dim=0)
             expected_demand = mean.squeeze().item()
         else:
-            expected_demand = self.model.sample_distribution(samples, num_samples=self.num_samples, pdf=self.calibrator)[0]
+            expected_demand = self.model.sample_distribution(samples, num_samples=self.num_samples, cdf=self.calibrator)[0]
 
         # Set inventory to safety_factor * expected_demand
         target_inventory = self.safety_factor * expected_demand

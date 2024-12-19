@@ -45,7 +45,7 @@ class InventoryMPC:
                 samples = samples.squeeze()
 
             # Sample demand from the predicted distribution
-            sampled_demand = self.model.sample_distribution(samples, num_samples=5, pdf=self.calibrator)[0]
+            sampled_demand = self.model.sample_distribution(samples, num_samples=5, cdf=self.calibrator)[0]
 
             # Determine the action (order quantity) to match the sampled demand
             action = int(max(0, sampled_demand - inventory_level))  # Ensure non-negative actions
@@ -57,7 +57,7 @@ class InventoryMPC:
                 first_action = action
 
             # Sample the next state from the predicted distribution
-            actual_demand = self.model.sample_distribution(samples, num_samples=1, pdf=self.calibrator)[0]
+            actual_demand = self.model.sample_distribution(samples, num_samples=1, cdf=self.calibrator)[0]
 
             # Compute waste and stock-outs
             waste = max(0, inventory_level - sampled_demand)
