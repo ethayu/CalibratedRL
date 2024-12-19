@@ -48,7 +48,7 @@ class BayesianNet(nn.Module):
         outputs = torch.stack([self.forward(x) for _ in range(num_samples)]).detach()
         self.eval()  # Return to evaluation mode
         if calibrator:
-            t, _, q = calibrator.transform(outputs.squeeze().unsqueeze(0).cpu().numpy(), outputs.squeeze().cpu().unique().numpy())
+            t, _, q = calibrator.transform(outputs.squeeze().unsqueeze(0).cpu().numpy(), outputs.squeeze().unique().cpu().numpy())
             return t[:, 0, :].squeeze(), q[:, 0, :].squeeze()
         else:
             return outputs.cpu()

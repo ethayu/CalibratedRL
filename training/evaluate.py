@@ -53,7 +53,7 @@ def evaluate_planner(planner, data, device):
         inventory_level = waste  # Update inventory level for the next step
         print(f"{count}: Shipped: {shipped}, Wasted: {wasted}, Stockouts: {stockouts}, Reward: {total_reward}, Time: {time.time() - start_time}")
         start_time = time.time()
-        if count := count + 1 > 100:
+        if (count := count + 1) > 5:
             break
 
     if type(shipped) == torch.Tensor:
@@ -126,20 +126,15 @@ def main():
 
         # Initialize planners
         mpc = InventoryMPC(model, input_dim=state_dim, num_trajectories=20, device=device, calibrator=None)
-        mpc = InventoryMPC(model, input_dim=state_dim, num_trajectories=20, device=device, calibrator=None)
         heuristic = HeuristicPlanner(model, device=device, calibrator=None)
         mpc_isotonic = InventoryMPC(model, input_dim=state_dim, num_trajectories=20, device=device, calibrator=isotonic)
-        mpc_isotonic = InventoryMPC(model, input_dim=state_dim, num_trajectories=20, device=device, calibrator=isotonic)
         heuristic_isotonic = HeuristicPlanner(model, device=device, calibrator=isotonic)
-        mpc_gp_beta = InventoryMPC(model, input_dim=state_dim, num_trajectories=20, device=device, calibrator=gp_beta)
         mpc_gp_beta = InventoryMPC(model, input_dim=state_dim, num_trajectories=20, device=device, calibrator=gp_beta)
         heuristic_gp_beta = HeuristicPlanner(model, device=device, calibrator=gp_beta)
 
         # Evaluate planners
         mpc_results = evaluate_planner(mpc, item_data, device)
         heuristic_results = evaluate_planner(heuristic, item_data, device)
-        mpc_isotonic_results = evaluate_planner(mpc_isotonic, item_data, device)
-        heuristic_isotonic_results = evaluate_planner(heuristic_isotonic, item_data, device)
         mpc_isotonic_results = evaluate_planner(mpc_isotonic, item_data, device)
         heuristic_isotonic_results = evaluate_planner(heuristic_isotonic, item_data, device)
         mpc_gp_beta_results = evaluate_planner(mpc_gp_beta, item_data, device)
@@ -166,6 +161,14 @@ def main():
         heuristic_isotonic_results = pd.DataFrame(heuristic_isotonic_results, index=[0])
         mpc_gp_beta_results = pd.DataFrame(mpc_gp_beta_results, index=[0])
         heuristic_gp_beta_results = pd.DataFrame(heuristic_gp_beta_results, index=[0])
+        
+        os.makedirs("results/mpc_by_item", exist_ok=True)
+        os.makedirs("results/heuristic_by_item", exist_ok=True)
+        os.makedirs("results/mpc_isotonic_by_item", exist_ok=True)
+        os.makedirs("results/heuristic_isotonic_by_item", exist_ok=True)
+        os.makedirs("results/mpc_gp_beta_by_item", exist_ok=True)
+        os.makedirs("results/heuristic_gp_beta_by_item", exist_ok=True)
+
         mpc_results.to_csv(f"results/mpc_by_item/{item_nbr}_results.csv", index=False)
         heuristic_results.to_csv(f"results/heuristic_by_item/{item_nbr}_results.csv", index=False)
         mpc_isotonic_results.to_csv(f"results/mpc_isotonic_by_item/{item_nbr}_results.csv", index=False)
@@ -223,6 +226,7 @@ def main():
     mpc_gp_beta_results_all.to_csv("results/mpc_gp_beta_results.csv", index=False)
     heuristic_gp_beta_results_all.to_csv("results/heuristic_gp_beta_results.csv", index=False)
     
+    os.makedirs("results/summary", exist_ok=True)
     mpc_summary.to_csv("results/summary/mpc.csv")
     heuristic_summary.to_csv("results/summary/heuristic.csv")
     mpc_isotonic_summary.to_csv("results/summary/mpc_isotonic.csv")
