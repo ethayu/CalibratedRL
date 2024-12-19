@@ -6,6 +6,7 @@ from models.heuristic_planning import HeuristicPlanner
 from models.dynamics_model import BayesianNet
 import numpy as np
 from training import enforce_reproducibility
+from netcal.regression import IsotonicRegression, GPBeta
 
 def evaluate_planner(planner, data, device):
     """
@@ -102,6 +103,11 @@ def main():
     # Evaluate each item separately
     for item_nbr in unique_items:
         print(f"Evaluating item: {item_nbr}")
+        
+        isotonic = IsotonicRegression()
+        gp_beta = GPBeta()
+        isotonic.load_model(f'models/calibrators/isotonic_item_{item_nbr}.pkl')
+        gp_beta.load_model(f'models/calibrators/gp_beta_item_{item_nbr}.pkl')
 
         # Filter test data for this item
         item_data = test_data[test_data['item_nbr'] == item_nbr]
@@ -114,17 +120,17 @@ def main():
         model.eval()
 
         # Initialize planners
-        mpc = InventoryMPC(model, input_dim=state_dim, num_trajectories=200, device=device, calibration=None)
-        heuristic = HeuristicPlanner(model, device=device, calibration=None)
-        mpc_isotonic = InventoryMPC(model, input_dim=state_dim, num_trajectories=200, device=device, calibration='isotonic')
-        heuristic_isotonic = HeuristicPlanner(model, device=device, calibration='isotonic')
-        mpc_gp_beta = InventoryMPC(model, input_dim=state_dim, num_trajectories=200, device=device, calibration='gp_beta')
-        heuristic_gp_beta = HeuristicPlanner(model, device=device, calibration='gp_beta')
+        mpc = InventoryMPC(model, input_dim=state_dim, num_trajectories=200, device=device, calibrator=None)
+        heuristic = HeuristicPlanner(model, device=device, calibrator=None)
+        mpc_isotonic = InventoryMPC(model, input_dim=state_dim, num_trajectories=200, device=device, calibrator=isotonic)
+        heuristic_isotonic = HeuristicPlanner(model, device=device, calibrator=isotonic)
+        mpc_gp_beta = InventoryMPC(model, input_dim=state_dim, num_trajectories=200, device=device, calibrator=gp_beta)
+        heuristic_gp_beta = HeuristicPlanner(model, device=device, calibrator=gp_beta)
 
         # Evaluate planners
         # mpc_results = evaluate_planner(mpc, item_data, device)
         # heuristic_results = evaluate_planner(heuristic, item_data, device)
-        mpc_isotonic_results = evaluate_planner(mpc_isotonic, item_data, device)
+        # mpc_isotonic_results = evaluate_planner(mpc_isotonic, item_data, device)
         heuristic_isotonic_results = evaluate_planner(heuristic_isotonic, item_data, device)
         mpc_gp_beta_results = evaluate_planner(mpc_gp_beta, item_data, device)
         heuristic_gp_beta_results = evaluate_planner(heuristic_gp_beta, item_data, device)

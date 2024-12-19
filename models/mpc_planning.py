@@ -1,5 +1,5 @@
 class InventoryMPC:
-    def __init__(self, model, input_dim, horizon=5, num_trajectories=1000, num_samples=300, device="cpu", calibration=None):
+    def __init__(self, model, input_dim, horizon=5, num_trajectories=1000, num_samples=300, device="cpu", calibrator=None):
         """
         Initialize MPC for inventory management with probabilistic sampling.
 
@@ -10,6 +10,7 @@ class InventoryMPC:
             num_trajectories: Number of trajectories to sample.
             num_samples: Number of Monte Carlo samples for Bayesian inference.
             device: Device to run computations on (e.g., "cpu", "cuda", or "mps").
+            calibrator: Calibration model for the predicted distribution (default: None).
         """
         self.model = model.to(device)
         self.input_dim = input_dim
@@ -17,7 +18,7 @@ class InventoryMPC:
         self.num_trajectories = num_trajectories
         self.num_samples = num_samples
         self.device = device
-        self.calibration = calibration
+        self.calibrator = calibrator
 
     def simulate_trajectory(self, initial_state):
         """
@@ -39,10 +40,12 @@ class InventoryMPC:
         for step in range(self.horizon):
             # Predict the next state's demand distribution
             input_data = current_state.unsqueeze(0).to(self.device)  # Add batch dimension
-            samples = self.model.probabilistic_forward(input_data, num_samples=self.num_samples, calibration=self.calibration).squeeze()
+            samples = self.model.probabilistic_forward(input_data, num_samples=self.num_samples, calibrator=self.calibrator)
+            if not self.calibrator:
+                samples = samples.squeeze()
 
             # Sample demand from the predicted distribution
-            sampled_demand = self.model.sample_distribution(samples, num_samples=5)[0]
+            sampled_demand = self.model.sample_distribution(samples, num_samples=5, pdf=self.calibrator)[0]
 
             # Determine the action (order quantity) to match the sampled demand
             action = int(max(0, sampled_demand - inventory_level))  # Ensure non-negative actions
@@ -54,7 +57,7 @@ class InventoryMPC:
                 first_action = action
 
             # Sample the next state from the predicted distribution
-            actual_demand = self.model.sample_distribution(samples, num_samples=1)[0]
+            actual_demand = self.model.sample_distribution(samples, num_samples=1, pdf=self.calibrator)[0]
 
             # Compute waste and stock-outs
             waste = max(0, inventory_level - sampled_demand)

@@ -48,12 +48,16 @@ class BayesianNet(nn.Module):
         outputs = torch.stack([self.forward(x) for _ in range(num_samples)]).detach()
         self.eval()  # Return to evaluation mode
         if calibrator:
-            t, s, q = calibrator.transform(outputs.squeeze().unsqueeze(0))
-            outputs = None
-            # TODO: Implement calibration
-        return outputs
+            t, s, q = calibrator.transform(outputs.squeeze().unsqueeze(0).cpu().numpy(), 2)
+            print(t.shape, t)
+            print(s.shape, s)
+            print(q.shape, q)
+            input()
+            return t.squeeze(), s.squeeze()
+        else:
+            return outputs
     
-    def sample_distribution(self, distribution, num_samples=300):
+    def sample_distribution(self, distribution, num_samples=300, pdf=False):
         """
         Sample from the predicted distribution using Monte Carlo dropout.
 
@@ -65,8 +69,22 @@ class BayesianNet(nn.Module):
             mean: Mean of the predicted distribution.
             std: Standard deviation of the predicted distribution.
         """
-        sampled_values = distribution[torch.randint(0, distribution.size(0), (num_samples,))].detach().numpy()
-        return sampled_values.mean(), sampled_values.std()
+        if pdf:
+            points, pdf = distribution
+            pdf /= np.sum(pdf)
+            
+            # Softmax
+            exp_pdf = np.exp(pdf)  
+            pdf_normalized = exp_pdf / np.sum(exp_pdf) 
+            
+            sampled_indices = np.random.choice(len(points), size=num_samples, p=pdf_normalized)
+
+            # Map the sampled indices back to the corresponding points
+            samples = points[sampled_indices]
+            return samples.mean(), samples.std()
+        else:
+            sampled_values = distribution[torch.randint(0, distribution.size(0), (num_samples,))].detach().numpy()
+            return sampled_values.mean(), sampled_values.std()
     
     def update_state(self, current_state, actual_demand):
         current_state = current_state.clone().detach().cpu().numpy()

@@ -86,9 +86,9 @@ def main():
         gp_beta.fit(preds, gts)
 
         # Save calibration models
-        os.makedirs("models/calibration", exist_ok=True)
-        isotonic.save_model(os.path.join("models/calibration", f'isotonic_item_{item_nbr}.pkl'))
-        gp_beta.save_model(os.path.join("models/calibration", f'gp_beta_item_{item_nbr}.pkl'))
+        os.makedirs("models/calibrators", exist_ok=True)
+        isotonic.save_model(os.path.join("models/calibrators", f'isotonic_item_{item_nbr}.pkl'))
+        gp_beta.save_model(os.path.join("models/calibrators", f'gp_beta_item_{item_nbr}.pkl'))
         print(f"time taken for item {item_nbr}: {time.time() - start}")
         start = time.time()
 if __name__ == "__main__":
