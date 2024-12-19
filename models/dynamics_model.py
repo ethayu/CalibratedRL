@@ -48,14 +48,14 @@ class BayesianNet(nn.Module):
         outputs = torch.stack([self.forward(x) for _ in range(num_samples)]).detach()
         self.eval()  # Return to evaluation mode
         if calibrator:
-            t, s, q = calibrator.transform(outputs.squeeze().unsqueeze(0).cpu().numpy(), 2)
-            print(t.shape, t)
-            print(s.shape, s)
-            print(q.shape, q)
-            input()
-            return t.squeeze(), s.squeeze()
+            t, s, q = calibrator.transform(outputs.squeeze().unsqueeze(0).cpu().numpy(), outputs.squeeze().cpu().unique().numpy())
+            # print(t.shape, t)
+            # print(s.shape, s)
+            # print(q.shape, q)
+            # input()
+            return t[:, 0, :].squeeze(), q[:, 0, :].squeeze()
         else:
-            return outputs
+            return outputs.cpu()
     
     def sample_distribution(self, distribution, num_samples=300, pdf=False):
         """
@@ -71,17 +71,22 @@ class BayesianNet(nn.Module):
         """
         if pdf:
             points, pdf = distribution
-            pdf /= np.sum(pdf)
+            # pdf /= np.sum(pdf)
             
-            # Softmax
-            exp_pdf = np.exp(pdf)  
-            pdf_normalized = exp_pdf / np.sum(exp_pdf) 
+            # # Softmax
+            # exp_pdf = np.exp(pdf)  
+            # pdf_normalized = exp_pdf / np.sum(exp_pdf) 
             
-            sampled_indices = np.random.choice(len(points), size=num_samples, p=pdf_normalized)
+            # sampled_indices = np.random.choice(len(points), size=num_samples, p=pdf_normalized)
 
-            # Map the sampled indices back to the corresponding points
-            samples = points[sampled_indices]
-            return samples.mean(), samples.std()
+            # # Map the sampled indices back to the corresponding points
+            # samples = points[sampled_indices]
+            # return samples.mean(), samples.std()
+            random_values = np.random.uniform(0, 1, num_samples)
+    
+            # Use interpolation to find corresponding points
+            sampled_points = np.interp(random_values, pdf, points)
+            return sampled_points.mean(), sampled_points.std()
         else:
             sampled_values = distribution[torch.randint(0, distribution.size(0), (num_samples,))].detach().numpy()
             return sampled_values.mean(), sampled_values.std()
