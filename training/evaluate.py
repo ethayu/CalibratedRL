@@ -28,7 +28,7 @@ def evaluate_planner(planner, data, device):
     inventory_level = 0
     import time
     start_time = time.time()
-    for _, row in data.iterrows():
+    for i, row in data.iterrows():
         # Get the current state
         state = torch.tensor(row.drop(labels=["item_nbr", "date"]).values.astype(np.float32), dtype=torch.float32, device=device)
 
@@ -52,6 +52,8 @@ def evaluate_planner(planner, data, device):
         inventory_level = waste  # Update inventory level for the next step
         print(f"Shipped: {shipped}, Wasted: {wasted}, Stockouts: {stockouts}, Reward: {total_reward}, Time: {time.time() - start_time}")
         start_time = time.time()
+        if i > 10:
+            break
 
     if type(shipped) == torch.Tensor:
         shipped = shipped.item()
@@ -122,11 +124,11 @@ def main():
         model.eval()
 
         # Initialize planners
-        mpc = InventoryMPC(model, input_dim=state_dim, num_trajectories=200, device=device, calibrator=None)
+        mpc = InventoryMPC(model, input_dim=state_dim, num_trajectories=10, device=device, calibrator=None)
         heuristic = HeuristicPlanner(model, device=device, calibrator=None)
-        mpc_isotonic = InventoryMPC(model, input_dim=state_dim, num_trajectories=200, device=device, calibrator=isotonic)
+        mpc_isotonic = InventoryMPC(model, input_dim=state_dim, num_trajectories=10, device=device, calibrator=isotonic)
         heuristic_isotonic = HeuristicPlanner(model, device=device, calibrator=isotonic)
-        mpc_gp_beta = InventoryMPC(model, input_dim=state_dim, num_trajectories=200, device=device, calibrator=gp_beta)
+        mpc_gp_beta = InventoryMPC(model, input_dim=state_dim, num_trajectories=10, device=device, calibrator=gp_beta)
         heuristic_gp_beta = HeuristicPlanner(model, device=device, calibrator=gp_beta)
 
         # Evaluate planners
