@@ -5,6 +5,7 @@ import numpy as np
 from netcal import manual_seed
 from netcal.regression import IsotonicRegression, GPBeta
 from typing import Union
+from models import PLOT
 
 class BayesianNet(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_dim=128, num_layers=5, dropout_rate=0.5):
@@ -47,6 +48,20 @@ class BayesianNet(nn.Module):
         self.train()  # Enable dropout for sampling
         outputs = torch.stack([self.forward(x) for _ in range(num_samples)]).detach()
         self.eval()  # Return to evaluation mode
+        if PLOT:
+            from matplotlib import pyplot as plt
+            outputs_cpu = outputs.cpu().numpy()
+            num_bins = 10  # Adjust the number of bins as needed
+            hist, bin_edges = np.histogram(outputs_cpu, bins=num_bins, density=True)
+
+            # Plotting the binned probability distribution
+            plt.figure(figsize=(8, 5))
+            plt.bar(bin_edges[:-1], hist, width=np.diff(bin_edges), edgecolor='black', align='edge', alpha=0.7)
+            plt.title('State Transition Distribution (Binned)')
+            plt.xlabel('State')
+            plt.ylabel('Probability')
+            plt.grid(axis='y', linestyle='--', alpha=0.7)
+            plt.show()
         if calibrator:
             t, _, q = calibrator.transform(outputs.squeeze().unsqueeze(0).cpu().numpy(), outputs.squeeze().unique().cpu().numpy())
             return t[:, 0, :].squeeze(), q[:, 0, :].squeeze()
